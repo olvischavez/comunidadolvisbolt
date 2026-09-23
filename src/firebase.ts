@@ -415,11 +415,16 @@ export async function getAllUsersForAdmin(currentAdminProfile?: UserCommunityPro
     const users: UserCommunityProfile[] = [];
     snap.forEach((d) => {
       const data = d.data();
+      const rawName = data.displayName || data.name;
+      const userName = (rawName && rawName !== 'Miembro Bolt' && rawName !== 'Miembro')
+        ? rawName
+        : (data.email ? data.email.split('@')[0] : 'Usuario');
+
       users.push({
         id: d.id,
         uid: data.uid || d.id,
         email: data.email || '',
-        name: data.name || 'Miembro Bolt',
+        name: userName,
         avatar: data.avatar || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
         boltCoins: typeof data.boltCoins === 'number' ? data.boltCoins : 150,
         level: data.level || 1,
