@@ -79,14 +79,13 @@ export async function syncUserProfile(user: FirebaseUser): Promise<UserCommunity
   const localDefault = createLocalProfileFromFbUser(user);
 
   try {
-    // Ultra-fast timeout of 1.8 seconds so user is NEVER blocked
     const firestoreWork = (async () => {
       const userRef = doc(db, 'users', user.uid);
       const snap = await getDoc(userRef);
 
       if (snap.exists()) {
         const data = snap.data();
-        return {
+        const profile: UserCommunityProfile = {
           id: user.uid,
           uid: user.uid,
           email: user.email || localDefault.email,
@@ -101,20 +100,32 @@ export async function syncUserProfile(user: FirebaseUser): Promise<UserCommunity
           lastPrizeRedeemedDate: data.lastPrizeRedeemedDate || null,
           role: user.email === 'olvischavezmustafa@gmail.com' ? 'admin' : (data.role || 'member'),
         };
+
+        // Ensure email and last active time are updated in Firestore
+        setDoc(userRef, {
+          email: user.email || '',
+          name: profile.name,
+          avatar: profile.avatar,
+          role: profile.role,
+          updatedAt: new Date().toISOString(),
+        }, { merge: true }).catch((e) => console.warn('Update user metadata warn:', e));
+
+        return profile;
       }
 
-      // If document doesn't exist yet, write it in background
-      setDoc(userRef, {
+      // If document doesn't exist yet, write it immediately to Firestore
+      const newProfile = {
         ...localDefault,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      }).catch((e) => console.warn('setDoc background warn:', e));
+      };
 
+      await setDoc(userRef, newProfile, { merge: true });
       return localDefault;
     })();
 
     const timer = new Promise<UserCommunityProfile>((resolve) => {
-      setTimeout(() => resolve(localDefault), 1800);
+      setTimeout(() => resolve(localDefault), 2500);
     });
 
     return await Promise.race([firestoreWork, timer]);
@@ -133,22 +144,39 @@ export async function updateUserBolts(
   xp: number,
   completedTaskId?: string
 ): Promise<void> {
-  const userRef = doc(db, 'users', uid);
-  const snap = await getDoc(userRef);
-  if (!snap.exists()) return;
+  try {
+    const userRef = doc(db, 'users', uid);
+    const snap = await getDoc(userRef);
 
-  const currentTasks: string[] = snap.data().completedTasks || [];
-  const updatedTasks = completedTaskId && !currentTasks.includes(completedTaskId)
-    ? [...currentTasks, completedTaskId]
-    : currentTasks;
+    if (!snap.exists()) {
+      await setDoc(userRef, {
+        id: uid,
+        uid,
+        boltCoins,
+        xp,
+        level: Math.floor(xp / 500) + 1,
+        completedTasks: completedTaskId ? [completedTaskId] : [],
+        updatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      }, { merge: true });
+      return;
+    }
 
-  await updateDoc(userRef, {
-    boltCoins,
-    xp,
-    level: Math.floor(xp / 500) + 1,
-    completedTasks: updatedTasks,
-    updatedAt: new Date().toISOString(),
-  });
+    const currentTasks: string[] = snap.data().completedTasks || [];
+    const updatedTasks = completedTaskId && !currentTasks.includes(completedTaskId)
+      ? [...currentTasks, completedTaskId]
+      : currentTasks;
+
+    await updateDoc(userRef, {
+      boltCoins,
+      xp,
+      level: Math.floor(xp / 500) + 1,
+      completedTasks: updatedTasks,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('Error updating user bolts in Firestore:', err);
+  }
 }
 
 /**
@@ -357,7 +385,7 @@ export async function updateRedemptionStatus(
 /**
  * Gets all registered users for admin
  */
-export async function getAllUsersForAdmin(): Promise<UserCommunityProfile[]> {
+export async function getAllUsersForAdmin(currentAdminProfile?: UserCommunityProfile): Promise<UserCommunityProfile[]> {
   try {
     const snap = await getDocs(collection(db, 'users'));
     const users: UserCommunityProfile[] = [];
@@ -368,20 +396,39 @@ export async function getAllUsersForAdmin(): Promise<UserCommunityProfile[]> {
         uid: data.uid || d.id,
         email: data.email || '',
         name: data.name || 'Miembro',
-        avatar: data.avatar || '',
-        boltCoins: data.boltCoins || 0,
+        avatar: data.avatar || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
+        boltCoins: typeof data.boltCoins === 'number' ? data.boltCoins : 150,
         level: data.level || 1,
-        xp: data.xp || 0,
+        xp: typeof data.xp === 'number' ? data.xp : 150,
         streakDays: data.streakDays || 1,
         claimedCodes: data.claimedCodes || [],
         completedTasks: data.completedTasks || [],
         lastPrizeRedeemedDate: data.lastPrizeRedeemedDate || null,
-        role: data.role || 'member',
+        role: data.role || (data.email === 'olvischavezmustafa@gmail.com' ? 'admin' : 'member'),
       });
     });
+
+    // If current admin is logged in but missing from list, include and auto-sync to Firestore
+    if (currentAdminProfile && (currentAdminProfile.uid || currentAdminProfile.email)) {
+      const exists = users.some((u) => (currentAdminProfile.uid && u.uid === currentAdminProfile.uid) || (currentAdminProfile.email && u.email === currentAdminProfile.email));
+      if (!exists) {
+        users.unshift(currentAdminProfile);
+        if (currentAdminProfile.uid) {
+          const userRef = doc(db, 'users', currentAdminProfile.uid);
+          setDoc(userRef, {
+            ...currentAdminProfile,
+            updatedAt: new Date().toISOString(),
+          }, { merge: true }).catch((err) => console.warn('Auto-save admin in Firestore failed:', err));
+        }
+      }
+    }
+
     return users;
   } catch (err) {
     console.error('Error fetching users for admin:', err);
+    if (currentAdminProfile && (currentAdminProfile.uid || currentAdminProfile.email)) {
+      return [currentAdminProfile];
+    }
     return [];
   }
 }

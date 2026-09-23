@@ -110,7 +110,7 @@ export const PanelAdmin: React.FC<PanelAdminProps> = ({
     try {
       const [reds, userList] = await Promise.all([
         getAllRedemptionsForAdmin(),
-        getAllUsersForAdmin(),
+        getAllUsersForAdmin(adminProfile),
       ]);
       setRedemptions(reds);
       setUsers(userList);
