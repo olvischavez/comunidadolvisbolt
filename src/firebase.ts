@@ -386,6 +386,23 @@ export async function updateRedemptionStatus(
  * Gets all registered users for admin
  */
 export async function getAllUsersForAdmin(currentAdminProfile?: UserCommunityProfile): Promise<UserCommunityProfile[]> {
+  const adminEmail = currentAdminProfile?.email || 'olvischavezmustafa@gmail.com';
+  const defaultAdminUser: UserCommunityProfile = {
+    id: currentAdminProfile?.uid || currentAdminProfile?.id || 'admin-olvis',
+    uid: currentAdminProfile?.uid || 'admin-olvis',
+    email: adminEmail,
+    name: currentAdminProfile?.name || 'Olvis Bolt (Dueño)',
+    avatar: currentAdminProfile?.avatar || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
+    boltCoins: typeof currentAdminProfile?.boltCoins === 'number' ? currentAdminProfile.boltCoins : 150,
+    level: currentAdminProfile?.level || 1,
+    xp: typeof currentAdminProfile?.xp === 'number' ? currentAdminProfile.xp : 150,
+    streakDays: currentAdminProfile?.streakDays || 1,
+    claimedCodes: currentAdminProfile?.claimedCodes || [],
+    completedTasks: currentAdminProfile?.completedTasks || [],
+    lastPrizeRedeemedDate: currentAdminProfile?.lastPrizeRedeemedDate || null,
+    role: 'admin',
+  };
+
   try {
     const snap = await getDocs(collection(db, 'users'));
     const users: UserCommunityProfile[] = [];
@@ -395,7 +412,7 @@ export async function getAllUsersForAdmin(currentAdminProfile?: UserCommunityPro
         id: d.id,
         uid: data.uid || d.id,
         email: data.email || '',
-        name: data.name || 'Miembro',
+        name: data.name || 'Miembro Bolt',
         avatar: data.avatar || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
         boltCoins: typeof data.boltCoins === 'number' ? data.boltCoins : 150,
         level: data.level || 1,
@@ -408,28 +425,28 @@ export async function getAllUsersForAdmin(currentAdminProfile?: UserCommunityPro
       });
     });
 
-    // If current admin is logged in but missing from list, include and auto-sync to Firestore
-    if (currentAdminProfile && (currentAdminProfile.uid || currentAdminProfile.email)) {
-      const exists = users.some((u) => (currentAdminProfile.uid && u.uid === currentAdminProfile.uid) || (currentAdminProfile.email && u.email === currentAdminProfile.email));
-      if (!exists) {
-        users.unshift(currentAdminProfile);
-        if (currentAdminProfile.uid) {
-          const userRef = doc(db, 'users', currentAdminProfile.uid);
-          setDoc(userRef, {
-            ...currentAdminProfile,
-            updatedAt: new Date().toISOString(),
-          }, { merge: true }).catch((err) => console.warn('Auto-save admin in Firestore failed:', err));
-        }
-      }
+    const hasAdmin = users.some(
+      (u) => u.email === adminEmail || (currentAdminProfile?.uid && u.uid === currentAdminProfile.uid)
+    );
+
+    if (!hasAdmin) {
+      users.unshift(defaultAdminUser);
+      const docId = defaultAdminUser.uid || 'admin-olvis';
+      setDoc(
+        doc(db, 'users', docId),
+        {
+          ...defaultAdminUser,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      ).catch((e) => console.warn('Auto-save admin in Firestore failed:', e));
     }
 
     return users;
   } catch (err) {
-    console.error('Error fetching users for admin:', err);
-    if (currentAdminProfile && (currentAdminProfile.uid || currentAdminProfile.email)) {
-      return [currentAdminProfile];
-    }
-    return [];
+    console.warn('Error fetching users from Firestore (using admin fallback):', err);
+    return [defaultAdminUser];
   }
 }
 
