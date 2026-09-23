@@ -57,52 +57,71 @@ export async function logoutUser(): Promise<void> {
  * Gets or creates the user's persistent profile document in Firestore
  */
 export async function syncUserProfile(user: FirebaseUser): Promise<UserCommunityProfile> {
-  const userRef = doc(db, 'users', user.uid);
-  const snap = await getDoc(userRef);
+  try {
+    const userRef = doc(db, 'users', user.uid);
+    const snap = await getDoc(userRef);
 
-  if (snap.exists()) {
-    const data = snap.data();
+    if (snap.exists()) {
+      const data = snap.data();
+      return {
+        id: user.uid,
+        uid: user.uid,
+        email: user.email || '',
+        name: data.name || user.displayName || 'Miembro Bolt',
+        avatar: data.avatar || user.photoURL || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
+        boltCoins: typeof data.boltCoins === 'number' ? data.boltCoins : 150,
+        level: data.level || 1,
+        xp: data.xp || 150,
+        streakDays: data.streakDays || 1,
+        claimedCodes: data.claimedCodes || [],
+        completedTasks: data.completedTasks || [],
+        lastPrizeRedeemedDate: data.lastPrizeRedeemedDate || null,
+        role: user.email === 'olvischavezmustafa@gmail.com' ? 'admin' : (data.role || 'member'),
+      };
+    }
+
+    // Create initial user document with welcome bonus
+    const newProfile: UserCommunityProfile = {
+      id: user.uid,
+      uid: user.uid,
+      email: user.email || '',
+      name: user.displayName || 'Miembro Bolt',
+      avatar: user.photoURL || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
+      boltCoins: 150, // Welcome gift of 150 bolts
+      level: 1,
+      xp: 150,
+      streakDays: 1,
+      claimedCodes: [],
+      completedTasks: [],
+      lastPrizeRedeemedDate: null,
+      role: user.email === 'olvischavezmustafa@gmail.com' ? 'admin' : 'member',
+    };
+
+    await setDoc(userRef, {
+      ...newProfile,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    return newProfile;
+  } catch (err) {
+    console.warn('No se pudo sincronizar directamente con Firestore (usando fallback local):', err);
     return {
       id: user.uid,
       uid: user.uid,
       email: user.email || '',
-      name: data.name || user.displayName || 'Miembro Bolt',
-      avatar: data.avatar || user.photoURL || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
-      boltCoins: typeof data.boltCoins === 'number' ? data.boltCoins : 150,
-      level: data.level || 1,
-      xp: data.xp || 150,
-      streakDays: data.streakDays || 1,
-      claimedCodes: data.claimedCodes || [],
-      completedTasks: data.completedTasks || [],
-      lastPrizeRedeemedDate: data.lastPrizeRedeemedDate || null,
-      role: user.email === 'olvischavezmustafa@gmail.com' ? 'admin' : (data.role || 'member'),
+      name: user.displayName || 'Miembro Bolt',
+      avatar: user.photoURL || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
+      boltCoins: 150,
+      level: 1,
+      xp: 150,
+      streakDays: 1,
+      claimedCodes: [],
+      completedTasks: [],
+      lastPrizeRedeemedDate: null,
+      role: user.email === 'olvischavezmustafa@gmail.com' ? 'admin' : 'member',
     };
   }
-
-  // Create initial user document with welcome bonus
-  const newProfile: UserCommunityProfile = {
-    id: user.uid,
-    uid: user.uid,
-    email: user.email || '',
-    name: user.displayName || 'Miembro Bolt',
-    avatar: user.photoURL || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
-    boltCoins: 150, // Welcome gift of 150 bolts
-    level: 1,
-    xp: 150,
-    streakDays: 1,
-    claimedCodes: [],
-    completedTasks: [],
-    lastPrizeRedeemedDate: null,
-    role: user.email === 'olvischavezmustafa@gmail.com' ? 'admin' : 'member',
-  };
-
-  await setDoc(userRef, {
-    ...newProfile,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  });
-
-  return newProfile;
 }
 
 /**
