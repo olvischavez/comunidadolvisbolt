@@ -1,12 +1,10 @@
 {
   "projectId": "comunidad-olvis-bolt-base-dato",
-  "appId": "1:1089834574714:web:1148110562a74b2258ecc3",
-  "apiKey": "AIzaSyC0q6IxSLtV1CmEUm9WBH9yyE9kJ_fXSeM",
+  "appId": "1:556749857313:web:73c3ddb83a166d4c73f960",
+  "apiKey": "AIzaSyAJ9UP_mxrRn2bn3jLpcr3f45urulveNyY",
   "authDomain": "comunidad-olvis-bolt-base-dato.firebaseapp.com",
   "firestoreDatabaseId": "(default)",
   "storageBucket": "comunidad-olvis-bolt-base-dato.firebasestorage.app",
-  "messagingSenderId": "1089834574714",
-  "measurementId": "",
-  "oAuthClientId": "1089834574714-7jepharj7uhehoa4eu0tur8d2dlve3jt.apps.googleusercontent.com",
-  "recaptchaSiteKey": ""
+  "messagingSenderId": "556749857313",
+  "measurementId": "G-KX5M6TC8PL"
 }
