@@ -55,11 +55,12 @@ export async function logoutUser(): Promise<void> {
 
 export function createLocalProfileFromFbUser(user: FirebaseUser): UserCommunityProfile {
   const isAdmin = user.email === 'olvischavezmustafa@gmail.com';
+  const nameFromGoogle = user.displayName || user.email?.split('@')[0] || 'Miembro Bolt';
   return {
     id: user.uid,
     uid: user.uid,
     email: user.email || '',
-    name: user.displayName || user.email?.split('@')[0] || 'Miembro Bolt',
+    name: nameFromGoogle,
     avatar: user.photoURL || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
     boltCoins: 150,
     level: 1,
@@ -83,14 +84,16 @@ export async function syncUserProfile(user: FirebaseUser): Promise<UserCommunity
       const userRef = doc(db, 'users', user.uid);
       const snap = await getDoc(userRef);
 
+      const googleName = user.displayName || user.email?.split('@')[0] || localDefault.name;
+
       if (snap.exists()) {
         const data = snap.data();
         const profile: UserCommunityProfile = {
           id: user.uid,
           uid: user.uid,
           email: user.email || localDefault.email,
-          name: data.name || user.displayName || localDefault.name,
-          avatar: data.avatar || user.photoURL || localDefault.avatar,
+          name: googleName,
+          avatar: user.photoURL || data.avatar || localDefault.avatar,
           boltCoins: typeof data.boltCoins === 'number' ? data.boltCoins : 150,
           level: data.level || 1,
           xp: data.xp || 150,
@@ -101,10 +104,11 @@ export async function syncUserProfile(user: FirebaseUser): Promise<UserCommunity
           role: user.email === 'olvischavezmustafa@gmail.com' ? 'admin' : (data.role || 'member'),
         };
 
-        // Ensure email and last active time are updated in Firestore
+        // Always sync the real Google name, email, and photo into Firestore
         setDoc(userRef, {
           email: user.email || '',
-          name: profile.name,
+          name: googleName,
+          displayName: googleName,
           avatar: profile.avatar,
           role: profile.role,
           updatedAt: new Date().toISOString(),
@@ -113,15 +117,18 @@ export async function syncUserProfile(user: FirebaseUser): Promise<UserCommunity
         return profile;
       }
 
-      // If document doesn't exist yet, write it immediately to Firestore
+      // If document doesn't exist yet, write it immediately to Firestore with Google name
       const newProfile = {
         ...localDefault,
+        name: googleName,
+        displayName: googleName,
+        email: user.email || '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
 
       await setDoc(userRef, newProfile, { merge: true });
-      return localDefault;
+      return newProfile;
     })();
 
     const timer = new Promise<UserCommunityProfile>((resolve) => {
