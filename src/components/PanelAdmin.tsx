@@ -744,12 +744,12 @@ export const PanelAdmin: React.FC<PanelAdminProps> = ({
                     className="w-10 h-10 rounded-xl object-cover border border-slate-700 shrink-0"
                   />
                   <div className="min-w-0">
-                    <h4 className="text-xs font-black text-white truncate">
-                      {u.name && u.name !== 'Miembro Bolt' && u.name !== 'Miembro'
-                        ? u.name
-                        : (u.email ? u.email.split('@')[0] : 'Usuario')}
+                    <h4 className="text-xs sm:text-sm font-black text-amber-300 font-mono truncate">
+                      {u.email ? u.email : (u.name || 'Cuenta Google sin correo')}
                     </h4>
-                    <p className="text-[11px] text-amber-300/80 font-mono truncate">{u.email}</p>
+                    {u.name && u.name !== u.email && (
+                      <p className="text-[11px] text-slate-300 font-medium truncate">{u.name}</p>
+                    )}
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-xs font-black text-amber-400 font-mono">
                         {u.boltCoins.toLocaleString()} ⚡
