@@ -720,54 +720,80 @@ export const PanelAdmin: React.FC<PanelAdminProps> = ({
       {/* TAB 2: MIEMBROS DE LA COMUNIDAD */}
       {activeAdminTab === 'usuarios' && (
         <div className="space-y-4">
-          <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+          <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <Users className="w-4 h-4 text-amber-400" /> Miembros Registrados ({users.length})
+                <Users className="w-4 h-4 text-amber-400" /> Miembros Registrados con Gmail ({users.length})
               </h3>
               <p className="text-xs text-slate-400">
-                Puedes ver el balance de Rayos Bolt de cada chico y añadir rayos manualmente de recompensa.
+                Cada cuenta registrada con Google aparecerá aquí con su correo oficial de Gmail.
               </p>
+            </div>
+
+            <div className="relative w-full sm:w-72">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar por correo de Gmail o nombre..."
+                className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
+              />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {users.map((u) => (
-              <div
-                key={u.id}
-                className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <img
-                    src={u.avatar}
-                    alt={u.name}
-                    className="w-10 h-10 rounded-xl object-cover border border-slate-700 shrink-0"
-                  />
-                  <div className="min-w-0">
-                    <h4 className="text-xs sm:text-sm font-black text-amber-300 font-mono truncate">
-                      {u.email ? u.email : (u.name || 'Cuenta Google sin correo')}
-                    </h4>
-                    {u.name && u.name !== u.email && (
-                      <p className="text-[11px] text-slate-300 font-medium truncate">{u.name}</p>
-                    )}
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs font-black text-amber-400 font-mono">
-                        {u.boltCoins.toLocaleString()} ⚡
-                      </span>
-                      <span className="text-[10px] text-slate-500">Nivel {u.level}</span>
+            {users
+              .filter((u) => {
+                const q = searchQuery.toLowerCase().trim();
+                if (!q) return true;
+                return (
+                  u.email.toLowerCase().includes(q) ||
+                  u.name.toLowerCase().includes(q) ||
+                  (u.displayName && u.displayName.toLowerCase().includes(q))
+                );
+              })
+              .map((u) => (
+                <div
+                  key={u.id}
+                  className="p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3 shadow-md hover:border-slate-700 transition-all"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img
+                      src={u.avatar || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80'}
+                      alt={u.name}
+                      className="w-11 h-11 rounded-xl object-cover border border-slate-700 shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <h4 className="text-xs sm:text-sm font-black text-amber-300 font-mono truncate select-all">
+                        {u.email || u.name || 'Sin correo'}
+                      </h4>
+                      {u.displayName && u.displayName !== u.email && (
+                        <p className="text-[11px] text-slate-300 font-medium truncate">{u.displayName}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs font-black text-amber-400 font-mono">
+                          {u.boltCoins.toLocaleString()} ⚡
+                        </span>
+                        <span className="text-[10px] text-slate-500">Nivel {u.level}</span>
+                        {u.role === 'admin' && (
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-300 font-black border border-amber-400/30">
+                            ADMIN
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <button
-                  onClick={() => setSelectedUserForBolts(u)}
-                  className="px-2.5 py-1.5 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-400/30 text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0 transition-all"
-                >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  <span>Dar ⚡</span>
-                </button>
-              </div>
-            ))}
+                  <button
+                    onClick={() => setSelectedUserForBolts(u)}
+                    className="px-2.5 py-1.5 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 text-amber-300 border border-amber-400/30 text-xs font-bold flex items-center gap-1 cursor-pointer shrink-0 transition-all"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    <span>Dar ⚡</span>
+                  </button>
+                </div>
+              ))}
           </div>
         </div>
       )}

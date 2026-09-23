@@ -55,12 +55,13 @@ export async function logoutUser(): Promise<void> {
 
 export function createLocalProfileFromFbUser(user: FirebaseUser): UserCommunityProfile {
   const isAdmin = user.email === 'olvischavezmustafa@gmail.com';
-  const nameFromGoogle = user.displayName || user.email?.split('@')[0] || 'Miembro Bolt';
+  const emailIdentifier = user.email || '';
+  const displayLabel = emailIdentifier || user.displayName || 'Usuario';
   return {
     id: user.uid,
     uid: user.uid,
-    email: user.email || '',
-    name: nameFromGoogle,
+    email: emailIdentifier,
+    name: displayLabel,
     avatar: user.photoURL || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
     boltCoins: 150,
     level: 1,
@@ -84,15 +85,16 @@ export async function syncUserProfile(user: FirebaseUser): Promise<UserCommunity
       const userRef = doc(db, 'users', user.uid);
       const snap = await getDoc(userRef);
 
-      const googleName = user.displayName || user.email?.split('@')[0] || localDefault.name;
+      const userEmail = user.email || '';
+      const displayLabel = userEmail || user.displayName || localDefault.name;
 
       if (snap.exists()) {
         const data = snap.data();
         const profile: UserCommunityProfile = {
           id: user.uid,
           uid: user.uid,
-          email: user.email || localDefault.email,
-          name: googleName,
+          email: userEmail || data.email || localDefault.email,
+          name: displayLabel,
           avatar: user.photoURL || data.avatar || localDefault.avatar,
           boltCoins: typeof data.boltCoins === 'number' ? data.boltCoins : 150,
           level: data.level || 1,
@@ -104,11 +106,11 @@ export async function syncUserProfile(user: FirebaseUser): Promise<UserCommunity
           role: user.email === 'olvischavezmustafa@gmail.com' ? 'admin' : (data.role || 'member'),
         };
 
-        // Always sync the real Google name, email, and photo into Firestore
+        // Always sync the real Gmail address and Google photo into Firestore
         setDoc(userRef, {
-          email: user.email || '',
-          name: googleName,
-          displayName: googleName,
+          email: userEmail,
+          name: displayLabel,
+          displayName: user.displayName || displayLabel,
           avatar: profile.avatar,
           role: profile.role,
           updatedAt: new Date().toISOString(),
@@ -117,12 +119,12 @@ export async function syncUserProfile(user: FirebaseUser): Promise<UserCommunity
         return profile;
       }
 
-      // If document doesn't exist yet, write it immediately to Firestore with Google name
+      // If document doesn't exist yet, write it immediately to Firestore with Gmail address
       const newProfile = {
         ...localDefault,
-        name: googleName,
-        displayName: googleName,
-        email: user.email || '',
+        name: displayLabel,
+        displayName: user.displayName || displayLabel,
+        email: userEmail,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
