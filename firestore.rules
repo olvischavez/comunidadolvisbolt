@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // User profile documents
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && (request.auth.uid == userId || request.auth.token.email == 'olvischavezmustafa@gmail.com');
+      allow delete: if request.auth != null && request.auth.token.email == 'olvischavezmustafa@gmail.com';
+    }
+
+    // Prize redemptions
+    match /redemptions/{redemptionId} {
+      allow list: if request.auth != null;
+      allow get: if request.auth != null && (resource.data.userId == request.auth.uid || request.auth.token.email == 'olvischavezmustafa@gmail.com');
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && request.auth.token.email == 'olvischavezmustafa@gmail.com';
+      allow delete: if request.auth != null && request.auth.token.email == 'olvischavezmustafa@gmail.com';
+    }
+
+    // Community News & Daily Updates published by Olvis Bolt
+    match /community_news/{newsId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.email == 'olvischavezmustafa@gmail.com';
+    }
+
+    // Promo codes for FC Mobile and Roblox
+    match /promo_codes/{codeId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.email == 'olvischavezmustafa@gmail.com';
+    }
+
+    // Global settings (Offerwall URL and ad config)
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.email == 'olvischavezmustafa@gmail.com';
+    }
+  }
+}

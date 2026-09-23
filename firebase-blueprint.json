@@ -1,0 +1,112 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile in the Olvis Bolt Community with bolts and gaming stats",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "avatar": { "type": "string" },
+        "boltCoins": { "type": "number" },
+        "level": { "type": "number" },
+        "xp": { "type": "number" },
+        "streakDays": { "type": "number" },
+        "claimedCodes": { "type": "array" },
+        "completedTasks": { "type": "array" },
+        "lastPrizeRedeemedDate": { "type": "string" },
+        "role": { "type": "string" }
+      },
+      "required": ["uid", "name", "boltCoins"]
+    },
+    "PrizeRedemption": {
+      "title": "PrizeRedemption",
+      "description": "Redemption request for Robux or FC Mobile prizes",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
+        "prizeId": { "type": "string" },
+        "prizeTitle": { "type": "string" },
+        "costBolts": { "type": "number" },
+        "category": { "type": "string" },
+        "accountIdentifier": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "prizeId", "costBolts", "status"]
+    },
+    "CommunityNews": {
+      "title": "CommunityNews",
+      "description": "Daily official gaming news and event announcements for FC Mobile and Roblox published by Olvis Bolt",
+      "type": "object",
+      "properties": {
+        "game": { "type": "string" },
+        "title": { "type": "string" },
+        "summary": { "type": "string" },
+        "content": { "type": "string" },
+        "category": { "type": "string" },
+        "date": { "type": "string" },
+        "author": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "sourceUrl": { "type": "string" },
+        "featured": { "type": "boolean" },
+        "tags": { "type": "array" },
+        "commentsCount": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["game", "title", "summary", "category"]
+    },
+    "PromoCodeEntity": {
+      "title": "PromoCodeEntity",
+      "description": "Active promotional code for FC Mobile or Roblox",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "game": { "type": "string" },
+        "reward": { "type": "string" },
+        "status": { "type": "string" },
+        "expiryDate": { "type": "string" },
+        "verifiedDate": { "type": "string" },
+        "instructions": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["code", "game", "reward", "status"]
+    },
+    "GlobalSettings": {
+      "title": "GlobalSettings",
+      "description": "App settings like offerwall URL and ad config",
+      "type": "object",
+      "properties": {
+        "simulatedAds": { "type": "boolean" },
+        "offerwallUrl": { "type": "string" },
+        "coppaSafeKidsMode": { "type": "boolean" },
+        "rewardVideoDuration": { "type": "number" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents"
+    },
+    "/redemptions/{redemptionId}": {
+      "schema": "PrizeRedemption",
+      "description": "Prize redemption requests"
+    },
+    "/community_news/{newsId}": {
+      "schema": "CommunityNews",
+      "description": "Community news and event posts published by admin"
+    },
+    "/promo_codes/{codeId}": {
+      "schema": "PromoCodeEntity",
+      "description": "Promotional codes for FC Mobile and Roblox"
+    },
+    "/settings/{settingId}": {
+      "schema": "GlobalSettings",
+      "description": "Global configuration settings"
+    }
+  }
+}
