@@ -296,14 +296,4 @@ export const REWARD_PRIZES: RewardPrize[] = [
     deliveryTime: 'Verificación 24h (Máx 1 al día)',
     instructions: 'Código digital oficial de 1000 Robux o transferencia directa a tu cuenta de Roblox verificada por Olvis Bolt.',
   },
-  {
-    id: 'prz-rbx-2',
-    title: 'Paquete de 2000 Robux',
-    costBolts: 300000,
-    category: 'Robux',
-    icon: '💎',
-    stock: 5,
-    deliveryTime: 'Verificación 24h (Máx 1 al día)',
-    instructions: 'Código digital oficial de 2000 Robux o transferencia directa a tu cuenta de Roblox verificada por Olvis Bolt.',
-  },
 ];
