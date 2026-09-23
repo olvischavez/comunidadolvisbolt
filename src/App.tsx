@@ -26,6 +26,7 @@ import { MobileBottomNav } from './components/MobileBottomNav';
 import {
   auth,
   syncUserProfile,
+  createLocalProfileFromFbUser,
   logoutUser,
   updateUserBolts,
   getGlobalAdConfigFromFirestore,
@@ -73,6 +74,13 @@ export default function App() {
   const [dailyClaimed, setDailyClaimed] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
 
+  // Save profile to localStorage whenever it changes
+  useEffect(() => {
+    if (userProfile && (userProfile.uid || userProfile.email)) {
+      localStorage.setItem('olvis_bolt_user_profile', JSON.stringify(userProfile));
+    }
+  }, [userProfile]);
+
   // Load news and promo codes from Firestore
   const loadCommunityData = async () => {
     setIsSyncing(true);
@@ -115,11 +123,22 @@ export default function App() {
 
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser) {
+        // 1. Inmediato: mostrar al usuario logueado en 0 ms
+        const instantProfile = createLocalProfileFromFbUser(fbUser);
+        setUserProfile((prev) => ({
+          ...instantProfile,
+          boltCoins: prev.boltCoins || 150,
+          xp: prev.xp || 150,
+          level: prev.level || 1,
+        }));
+        setIsAuthModalOpen(false);
+
+        // 2. Sincronizar en segundo plano con Firestore
         try {
           const profile = await syncUserProfile(fbUser);
           setUserProfile(profile);
         } catch (err) {
-          console.error('Error al sincronizar perfil de Firebase:', err);
+          console.warn('Sincronización en segundo plano completada con fallback:', err);
         }
       }
     });

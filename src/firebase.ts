@@ -53,74 +53,74 @@ export async function logoutUser(): Promise<void> {
   await fbSignOut(auth);
 }
 
+export function createLocalProfileFromFbUser(user: FirebaseUser): UserCommunityProfile {
+  const isAdmin = user.email === 'olvischavezmustafa@gmail.com';
+  return {
+    id: user.uid,
+    uid: user.uid,
+    email: user.email || '',
+    name: user.displayName || user.email?.split('@')[0] || 'Miembro Bolt',
+    avatar: user.photoURL || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
+    boltCoins: 150,
+    level: 1,
+    xp: 150,
+    streakDays: 1,
+    claimedCodes: [],
+    completedTasks: [],
+    lastPrizeRedeemedDate: null,
+    role: isAdmin ? 'admin' : 'member',
+  };
+}
+
 /**
- * Gets or creates the user's persistent profile document in Firestore
+ * Gets or creates the user's persistent profile document in Firestore with ultra-fast timeout
  */
 export async function syncUserProfile(user: FirebaseUser): Promise<UserCommunityProfile> {
+  const localDefault = createLocalProfileFromFbUser(user);
+
   try {
-    const userRef = doc(db, 'users', user.uid);
-    const snap = await getDoc(userRef);
+    // Ultra-fast timeout of 1.8 seconds so user is NEVER blocked
+    const firestoreWork = (async () => {
+      const userRef = doc(db, 'users', user.uid);
+      const snap = await getDoc(userRef);
 
-    if (snap.exists()) {
-      const data = snap.data();
-      return {
-        id: user.uid,
-        uid: user.uid,
-        email: user.email || '',
-        name: data.name || user.displayName || 'Miembro Bolt',
-        avatar: data.avatar || user.photoURL || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
-        boltCoins: typeof data.boltCoins === 'number' ? data.boltCoins : 150,
-        level: data.level || 1,
-        xp: data.xp || 150,
-        streakDays: data.streakDays || 1,
-        claimedCodes: data.claimedCodes || [],
-        completedTasks: data.completedTasks || [],
-        lastPrizeRedeemedDate: data.lastPrizeRedeemedDate || null,
-        role: user.email === 'olvischavezmustafa@gmail.com' ? 'admin' : (data.role || 'member'),
-      };
-    }
+      if (snap.exists()) {
+        const data = snap.data();
+        return {
+          id: user.uid,
+          uid: user.uid,
+          email: user.email || localDefault.email,
+          name: data.name || user.displayName || localDefault.name,
+          avatar: data.avatar || user.photoURL || localDefault.avatar,
+          boltCoins: typeof data.boltCoins === 'number' ? data.boltCoins : 150,
+          level: data.level || 1,
+          xp: data.xp || 150,
+          streakDays: data.streakDays || 1,
+          claimedCodes: data.claimedCodes || [],
+          completedTasks: data.completedTasks || [],
+          lastPrizeRedeemedDate: data.lastPrizeRedeemedDate || null,
+          role: user.email === 'olvischavezmustafa@gmail.com' ? 'admin' : (data.role || 'member'),
+        };
+      }
 
-    // Create initial user document with welcome bonus
-    const newProfile: UserCommunityProfile = {
-      id: user.uid,
-      uid: user.uid,
-      email: user.email || '',
-      name: user.displayName || 'Miembro Bolt',
-      avatar: user.photoURL || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
-      boltCoins: 150, // Welcome gift of 150 bolts
-      level: 1,
-      xp: 150,
-      streakDays: 1,
-      claimedCodes: [],
-      completedTasks: [],
-      lastPrizeRedeemedDate: null,
-      role: user.email === 'olvischavezmustafa@gmail.com' ? 'admin' : 'member',
-    };
+      // If document doesn't exist yet, write it in background
+      setDoc(userRef, {
+        ...localDefault,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }).catch((e) => console.warn('setDoc background warn:', e));
 
-    await setDoc(userRef, {
-      ...newProfile,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      return localDefault;
+    })();
+
+    const timer = new Promise<UserCommunityProfile>((resolve) => {
+      setTimeout(() => resolve(localDefault), 1800);
     });
 
-    return newProfile;
+    return await Promise.race([firestoreWork, timer]);
   } catch (err) {
-    console.warn('No se pudo sincronizar directamente con Firestore (usando fallback local):', err);
-    return {
-      id: user.uid,
-      uid: user.uid,
-      email: user.email || '',
-      name: user.displayName || 'Miembro Bolt',
-      avatar: user.photoURL || 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
-      boltCoins: 150,
-      level: 1,
-      xp: 150,
-      streakDays: 1,
-      claimedCodes: [],
-      completedTasks: [],
-      lastPrizeRedeemedDate: null,
-      role: user.email === 'olvischavezmustafa@gmail.com' ? 'admin' : 'member',
-    };
+    console.warn('Fallback inmediato de perfil:', err);
+    return localDefault;
   }
 }
 
